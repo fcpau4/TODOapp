@@ -1,6 +1,5 @@
 package com.example.a47276138y.todoapp;
 
-import android.databinding.DataBindingUtil;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,10 +8,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 
-import com.example.a47276138y.todoapp.databinding.FragmentMainBinding;
-import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -30,11 +30,12 @@ import com.google.firebase.database.ValueEventListener;
  */
 public class MainActivityFragment extends Fragment {
 
-    private FragmentMainBinding binding;
-    private AdapterTodo adapter;
-    private ArrayList<Todo> todos = null;
-    private FirebaseAuth auth = null;
+    private ArrayAdapter<String> adapter;
     private static final int RC_SIGN_IN = 123;
+    private TextView textView;
+    private DatabaseReference myRef;
+    private EditText et_input;
+
 
 
     public MainActivityFragment() {
@@ -44,34 +45,57 @@ public class MainActivityFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        binding = DataBindingUtil.inflate(inflater, R.layout.fragment_main, container, false);
+        View view = inflater.inflate(R.layout.fragment_main, container, false);
 
-        todos = new ArrayList<>();
+        ArrayList<String> todos = new ArrayList<>();
 
-        adapter = new AdapterTodo(getContext(), android.R.layout.simple_list_item_1, todos);
-
-        binding.lvTodos.setAdapter(adapter);
-
-        binding.button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Todo todo = new Todo();
-                todo.setMssg(binding.etInput.getText().toString());
-                adapter.add(todo);
-            }
-        });
+        ListView lvTodos = (ListView) view.findViewById(R.id.lv_todos);
+        Button btAdd = (Button) view.findViewById(R.id.button);
+        textView = (TextView) view.findViewById(R.id.textView);
+        et_input = (EditText) view.findViewById(R.id.et_input);
 
         // Write a message to the database
         FirebaseDatabase database = FirebaseDatabase.getInstance();
-        DatabaseReference myRef = database.getReference("message");
+        myRef = database.getReference("todos");
+
+        setupAuth();
+
+        adapter = new ArrayAdapter<String>(
+                getContext(),
+                R.layout.lv_todo_row,
+                R.id.textView,
+                todos);
+
+        lvTodos.setAdapter(adapter);
+        btAdd.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                String txt = et_input.getText().toString();
+                Log.d("XXXXXXXX", txt);
+
+                if(!txt.equals("")){
+                    DatabaseReference child = myRef.push();
+                    child.setValue(txt);
+                }
+            }
+        });
+
 
         myRef.setValue("Hello, World!");
 
         myRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                String value = dataSnapshot.getValue(String.class);
-                Log.w("OnDataChanged", "Value is: " + value);
+                // String value = dataSnapshot.getValue(String.class);
+                // Log.w("OnDataChanged", "Value is: " + value);
+                adapter.clear();
+
+                for (DataSnapshot values : dataSnapshot.getChildren()) {
+                    adapter.add(values.getValue().toString());
+                }
+
             }
 
             @Override
@@ -80,18 +104,19 @@ public class MainActivityFragment extends Fragment {
             }
         });
 
-        setupAuth();
 
-        return binding.getRoot();
+        return view;
 
     }
 
 
     private void setupAuth() {
 
-        auth = FirebaseAuth.getInstance();
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+
         if (auth.getCurrentUser() != null) {
             Log.d("Current user", String.valueOf(auth.getCurrentUser()));
+
         } else {
             startActivityForResult(
                     // Get an instance of AuthUI based on the default app
