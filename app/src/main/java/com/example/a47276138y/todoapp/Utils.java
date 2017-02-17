@@ -10,8 +10,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import static java.security.AccessController.getContext;
-
 /**
  * Created by 47276138y on 14/02/17.
  */
@@ -19,7 +17,6 @@ import static java.security.AccessController.getContext;
 public class Utils {
 
     static String mCurrentPhotoPath;
-    static final int REQUEST_TAKE_PHOTO = 1;
 
     public static File createImageFile() throws IOException {
         // Create an image file name
@@ -37,8 +34,6 @@ public class Utils {
         mCurrentPhotoPath = "file:" + image.getAbsolutePath();
         return image;
     }
-
-
 
 
 

@@ -1,23 +1,20 @@
 package com.example.a47276138y.todoapp;
 
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.app.Fragment;
-import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.GridView;
-import android.widget.TextView;
+import android.widget.ImageView;
 
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
+import com.bumptech.glide.Glide;
+import com.firebase.ui.database.FirebaseListAdapter;
+import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -25,19 +22,19 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import com.google.firebase.database.ValueEventListener;
-
 import static android.app.Activity.RESULT_OK;
-import static com.example.a47276138y.todoapp.Utils.REQUEST_TAKE_PHOTO;
 
 /**
  * A placeholder fragment containing a simple view.
  */
 public class MainActivityFragment extends Fragment {
 
-    private ArrayAdapter<String> adapter;
-    private static final int RC_SIGN_IN = 123;
-    private DatabaseReference myRef;
+    static final int REQUEST_TAKE_PHOTO = 1;
+    private File f;
+    private GridView gv;
+    private FirebaseListAdapter firebaseListAdapter;
+
+    DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
 
 
 
@@ -53,53 +50,32 @@ public class MainActivityFragment extends Fragment {
         ArrayList<String> todos = new ArrayList<>();
 
 
-        GridView gridView = (GridView) view.findViewById(R.id.gv_images);
+        gv = (GridView) view.findViewById(R.id.gv_images);
         Button btTakeImage = (Button) view.findViewById(R.id.bt_take_img);
         Button recVideo = (Button) view.findViewById(R.id.bt_rec_video);
 
-        // Write a message to the database
-        FirebaseDatabase database = FirebaseDatabase.getInstance();
-        myRef = database.getReference("images");
 
-        //setupAuth();
+        firebaseListAdapter = new FirebaseListAdapter<String>(getActivity(), String.class, R.layout.gv_image_square, ref) {
+            @Override
+            protected void populateView(View v, String model, int position) {
+                ImageView img = (ImageView) v.findViewById(R.id.photo_saved);
+                Glide.with(getContext()).load(Uri.fromFile(new File(model)))
+                        .centerCrop()
+                        .crossFade()
+                        .into(img);
+            }
+        };
 
-        adapter = new ArrayAdapter<String>(
-                getContext(),
-                R.layout.gv_image_square,
-                todos);
 
-        gridView.setAdapter(adapter);
+        gv.setAdapter(firebaseListAdapter);
+
         btTakeImage.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
                 dispatchTakePictureIntent();
-
             }
         });
-
-
-        myRef.setValue("Hello, World!");
-
-        myRef.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                // String value = dataSnapshot.getValue(String.class);
-                // Log.w("OnDataChanged", "Value is: " + value);
-                adapter.clear();
-
-                for (DataSnapshot values : dataSnapshot.getChildren()) {
-                    adapter.add(values.getValue().toString());
-                }
-
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Log.w("Failed to read value", databaseError.toException());
-            }
-        });
-
 
         return view;
 
@@ -125,6 +101,7 @@ public class MainActivityFragment extends Fragment {
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
                         Uri.fromFile(photoFile));
                 startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+                f = photoFile;
             }
         }
 
@@ -135,10 +112,13 @@ public class MainActivityFragment extends Fragment {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
+        super.onActivityResult(requestCode, resultCode, data);
+
         switch(requestCode){
             case 1:
                 if (resultCode == RESULT_OK) {
-
+                    ref.push();
+                    ref.setValue(f.getAbsolutePath());
                 }
 
                 break;
