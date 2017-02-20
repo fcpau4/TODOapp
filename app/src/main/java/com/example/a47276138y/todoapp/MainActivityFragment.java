@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +21,7 @@ import com.google.firebase.database.FirebaseDatabase;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLOutput;
 import java.util.ArrayList;
 
 import static android.app.Activity.RESULT_OK;
@@ -34,7 +36,6 @@ public class MainActivityFragment extends Fragment {
     private GridView gv;
     private FirebaseListAdapter firebaseListAdapter;
 
-    DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
 
 
 
@@ -47,27 +48,9 @@ public class MainActivityFragment extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_main, container, false);
 
-        ArrayList<String> todos = new ArrayList<>();
 
-
-        gv = (GridView) view.findViewById(R.id.gv_images);
         Button btTakeImage = (Button) view.findViewById(R.id.bt_take_img);
         Button recVideo = (Button) view.findViewById(R.id.bt_rec_video);
-
-
-        firebaseListAdapter = new FirebaseListAdapter<String>(getActivity(), String.class, R.layout.gv_image_square, ref) {
-            @Override
-            protected void populateView(View v, String model, int position) {
-                ImageView img = (ImageView) v.findViewById(R.id.photo_saved);
-                Glide.with(getContext()).load(Uri.fromFile(new File(model)))
-                        .centerCrop()
-                        .crossFade()
-                        .into(img);
-            }
-        };
-
-
-        gv.setAdapter(firebaseListAdapter);
 
         btTakeImage.setOnClickListener(new View.OnClickListener() {
 
@@ -76,6 +59,37 @@ public class MainActivityFragment extends Fragment {
                 dispatchTakePictureIntent();
             }
         });
+
+        gv = (GridView) view.findViewById(R.id.gv_images);
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
+
+        firebaseListAdapter = new FirebaseListAdapter<String>(getActivity(), String.class, R.layout.gv_image_square, ref) {
+            @Override
+            protected void populateView(View v, String model, int position) {
+
+
+                    ImageView img = (ImageView) v.findViewById(R.id.photo_saved);
+                    Glide.with(getContext()).load(Uri.fromFile(new File(model)))
+                            .centerCrop()
+                            .crossFade()
+                            .into(img);
+                }
+
+        };
+
+
+
+        gv.setAdapter(firebaseListAdapter);
+
+
+
+
+        /*recVideo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });*/
 
         return view;
 
@@ -108,6 +122,12 @@ public class MainActivityFragment extends Fragment {
 
     }
 
+    /*private void dispatchTakeVideoIntent(){
+
+        Intent takeVideoIntent = new
+
+    }*/
+
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -115,13 +135,13 @@ public class MainActivityFragment extends Fragment {
         super.onActivityResult(requestCode, resultCode, data);
 
         switch(requestCode){
-            case 1:
+            case REQUEST_TAKE_PHOTO:
                 if (resultCode == RESULT_OK) {
-                    ref.push();
-                    ref.setValue(f.getAbsolutePath());
+
+                    DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
+                    ref.push().setValue(f.getAbsolutePath());
                 }
 
-                break;
         }
     }
 
