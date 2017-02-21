@@ -1,9 +1,15 @@
 package com.example.a47276138y.todoapp;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,6 +18,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.firebase.ui.database.FirebaseListAdapter;
@@ -35,8 +42,6 @@ public class MainActivityFragment extends Fragment {
     private File f;
     private GridView gv;
     private FirebaseListAdapter firebaseListAdapter;
-
-
 
 
     public MainActivityFragment() {
@@ -63,20 +68,21 @@ public class MainActivityFragment extends Fragment {
         gv = (GridView) view.findViewById(R.id.gv_images);
         DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
 
-        firebaseListAdapter = new FirebaseListAdapter<String>(getActivity(), String.class, R.layout.gv_image_square, ref) {
+        firebaseListAdapter = new FirebaseListAdapter<PhotoData>(getActivity(), PhotoData.class, R.layout.gv_image_square, ref) {
             @Override
-            protected void populateView(View v, String model, int position) {
+            protected void populateView(View v, PhotoData pic, int position) {
 
+                ImageView img = (ImageView) v.findViewById(R.id.photo_saved);
+                Glide.with(getContext()).load(Uri.fromFile(new File(pic.getAbsolute())))
+                        .centerCrop()
+                        .crossFade()
+                        .into(img);
 
-                    ImageView img = (ImageView) v.findViewById(R.id.photo_saved);
-                    Glide.with(getContext()).load(Uri.fromFile(new File(model)))
-                            .centerCrop()
-                            .crossFade()
-                            .into(img);
-                }
+                TextView geoLoc = (TextView) v.findViewById(R.id.geo_localization);
+                geoLoc.setText(pic.getLocation());
+            }
 
         };
-
 
 
         gv.setAdapter(firebaseListAdapter);
@@ -94,7 +100,6 @@ public class MainActivityFragment extends Fragment {
         return view;
 
     }
-
 
 
     private void dispatchTakePictureIntent() {
@@ -134,18 +139,60 @@ public class MainActivityFragment extends Fragment {
 
         super.onActivityResult(requestCode, resultCode, data);
 
-        switch(requestCode){
+        switch (requestCode) {
             case REQUEST_TAKE_PHOTO:
                 if (resultCode == RESULT_OK) {
 
                     DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
-                    ref.push().setValue(f.getAbsolutePath());
-                }
 
+                    PhotoData picInfo = new PhotoData(f.getAbsolutePath(), getLocation());
+                    ref.push().setValue(picInfo);
+                }
         }
     }
 
+    public String getLocation(){
 
+        String location = "";
+        // Acquire a reference to the system Location Manager
+        LocationManager locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
+
+        // Define a listener that responds to location updates
+        LocationListener locationListener = new LocationListener() {
+
+            public void onLocationChanged(Location location) {
+                // Called when a new location is found by the network location provider.
+                Log.w("XXXXX", location.toString());
+            }
+
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
+
+            public void onProviderEnabled(String provider) {
+            }
+
+            public void onProviderDisabled(String provider) {
+            }
+        };
+
+        // Register the listener with the Location Manager to receive location updates
+        if (ActivityCompat.checkSelfPermission(getContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
+
+            location = locationManager.NETWORK_PROVIDER;
+        }
+
+        return location;
+
+    }
 
    /* private void setupAuth() {
 

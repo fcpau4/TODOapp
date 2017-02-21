@@ -11,14 +11,14 @@
 
     <TextView
         android:text="Plaça del Sol, Barcelona"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/geo_localization"
         android:textAlignment="center"
-        app:layout_constraintRight_toLeftOf="@+id/guideline3"
-        app:layout_constraintTop_toTopOf="@+id/guideline4"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintHorizontal_bias="0.66" />
+        app:layout_constraintRight_toRightOf="@+id/photo_saved"
+        app:layout_constraintLeft_toLeftOf="@+id/photo_saved"
+        app:layout_constraintBottom_toTopOf="@+id/guideline4"
+        tools:backgroundTint="@color/com_facebook_button_background_color_selected" />
 
     <ImageView
         android:layout_width="0dp"
@@ -43,8 +43,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/guideline4"
-        app:layout_constraintGuide_begin="186dp"
+        app:layout_constraintGuide_begin="189dp"
         android:orientation="horizontal"
-        tools:layout_editor_absoluteY="186dp"
+        tools:layout_editor_absoluteY="189dp"
         tools:layout_editor_absoluteX="0dp" />
+
 </android.support.constraint.ConstraintLayout>
