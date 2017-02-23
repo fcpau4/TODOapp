@@ -9,6 +9,8 @@ public class PhotoData {
     private String absolute;
     private String location;
 
+    public PhotoData(){}
+
     public PhotoData(String pathPhoto, String loc){
         absolute = pathPhoto;
         location = loc;

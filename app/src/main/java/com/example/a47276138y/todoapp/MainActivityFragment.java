@@ -1,6 +1,5 @@
 package com.example.a47276138y.todoapp;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -8,10 +7,13 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.util.Log;
+import android.support.v4.os.ResultReceiver;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,29 +21,39 @@ import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import com.bumptech.glide.Glide;
 import com.firebase.ui.database.FirebaseListAdapter;
-import com.google.firebase.auth.FirebaseAuthException;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
+import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
+import com.google.android.gms.location.LocationServices;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLOutput;
-import java.util.ArrayList;
 
 import static android.app.Activity.RESULT_OK;
 
 /**
  * A placeholder fragment containing a simple view.
  */
-public class MainActivityFragment extends Fragment {
+public class MainActivityFragment extends Fragment implements ConnectionCallbacks, OnConnectionFailedListener {
 
     static final int REQUEST_TAKE_PHOTO = 1;
     private File f;
     private GridView gv;
     private FirebaseListAdapter firebaseListAdapter;
+    private LocationListener locationListener;
+    private LocationManager locationManager;
+    private ResultReceiver mResultReceiver;
+
+    private Location mLastLocation;
+    private String mLongitudeText;
+    private String mLatitudeText;
+    private GoogleApiClient mGoogleApiClient;
+    private boolean addressRequested;
+    private String mAddressOutput;
 
 
     public MainActivityFragment() {
@@ -51,9 +63,16 @@ public class MainActivityFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
+        // Create an instance of GoogleAPIClient to get LastLocation.
+        if (mGoogleApiClient == null) {
+            mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
+        }
+
         View view = inflater.inflate(R.layout.fragment_main, container, false);
-
-
         Button btTakeImage = (Button) view.findViewById(R.id.bt_take_img);
         Button recVideo = (Button) view.findViewById(R.id.bt_rec_video);
 
@@ -61,6 +80,7 @@ public class MainActivityFragment extends Fragment {
 
             @Override
             public void onClick(View v) {
+
                 dispatchTakePictureIntent();
             }
         });
@@ -84,21 +104,30 @@ public class MainActivityFragment extends Fragment {
 
         };
 
-
         gv.setAdapter(firebaseListAdapter);
 
-
-
-
-        /*recVideo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-            }
-        });*/
-
         return view;
+    }
 
+
+    protected void startIntentService() {
+        Intent intent = new Intent(getActivity(), FetchAddressIntentService.class);
+        intent.putExtra(Constants.RECEIVER, mResultReceiver);
+        intent.putExtra(Constants.LOCATION_DATA_EXTRA, mLastLocation);
+        getActivity().startService(intent);
+    }
+
+    class AddressResultReceiver extends ResultReceiver {
+        public AddressResultReceiver(Handler handler) {
+            super(handler);
+        }
+
+        @Override
+        protected void onReceiveResult(int resultCode, Bundle resultData) {
+            // Get the address string
+            mAddressOutput = resultData.getString(Constants.RESULT_DATA_KEY);
+
+        }
     }
 
 
@@ -122,16 +151,19 @@ public class MainActivityFragment extends Fragment {
                 startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
                 f = photoFile;
             }
+
+            if (mGoogleApiClient.isConnected() && mLastLocation != null) {
+                startIntentService();
+            }
+
+            // If GoogleApiClient isn't connected, process the user's request by
+            // setting addressRequested to true. Later, when GoogleApiClient connects,
+            // launch the service to fetch the address. As far as the user is
+            // concerned, pressing the Fetch Address button
+            // immediately kicks off the process of getting the address.
+            addressRequested = true;
         }
-
-
     }
-
-    /*private void dispatchTakeVideoIntent(){
-
-        Intent takeVideoIntent = new
-
-    }*/
 
 
     @Override
@@ -145,38 +177,16 @@ public class MainActivityFragment extends Fragment {
 
                     DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
 
-                    PhotoData picInfo = new PhotoData(f.getAbsolutePath(), getLocation());
+                    PhotoData picInfo = new PhotoData(f.getAbsolutePath(), mAddressOutput);
                     ref.push().setValue(picInfo);
                 }
         }
     }
 
-    public String getLocation(){
 
-        String location = "";
-        // Acquire a reference to the system Location Manager
-        LocationManager locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
-
-        // Define a listener that responds to location updates
-        LocationListener locationListener = new LocationListener() {
-
-            public void onLocationChanged(Location location) {
-                // Called when a new location is found by the network location provider.
-                Log.w("XXXXX", location.toString());
-            }
-
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-            }
-
-            public void onProviderEnabled(String provider) {
-            }
-
-            public void onProviderDisabled(String provider) {
-            }
-        };
-
-        // Register the listener with the Location Manager to receive location updates
-        if (ActivityCompat.checkSelfPermission(getContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        if (ActivityCompat.checkSelfPermission(getActivity(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
             // here to request the missing permissions, and then overriding
@@ -184,34 +194,29 @@ public class MainActivityFragment extends Fragment {
             //                                          int[] grantResults)
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
 
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
-
-            location = locationManager.NETWORK_PROVIDER;
+        if(mLastLocation != null){
+            mLatitudeText = String.valueOf(mLastLocation.getLatitude());
+            mLongitudeText = String.valueOf(mLastLocation.getLongitude());
         }
 
-        return location;
+        if(addressRequested){
+            startIntentService();
+        }
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
 
     }
 
-   /* private void setupAuth() {
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
-        FirebaseAuth auth = FirebaseAuth.getInstance();
+    }
 
-        if (auth.getCurrentUser() != null) {
-            Log.d("Current user", String.valueOf(auth.getCurrentUser()));
 
-        } else {
-            startActivityForResult(
-                    // Get an instance of AuthUI based on the default app
-                    AuthUI.getInstance()
-                            .createSignInIntentBuilder()
-                            .setIsSmartLockEnabled(false)
-                            .setProviders(Arrays.asList(
-                                    new AuthUI.IdpConfig.Builder(AuthUI.EMAIL_PROVIDER).build(),
-                                    new AuthUI.IdpConfig.Builder(AuthUI.GOOGLE_PROVIDER).build())
-                            )
-                            .build(),
-                    RC_SIGN_IN);}
-    }*/
 }

@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">TODOapp</string>
     <string name="action_settings">Settings</string>
+    <string name="service_not_available">Has ocurred a Network or I/O problem.</string>
+    <string name="invalid_lat_long_used">Invalid Latitude and Longitude values.</string>
+    <string name="no_address_found">Addresses haven\'t been found.</string>
+    <string name="address_found">Lookup\'s address was successful!</string>
 </resources>
