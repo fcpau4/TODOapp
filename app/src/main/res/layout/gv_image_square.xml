@@ -12,44 +12,50 @@
     <TextView
         android:text="Plaça del Sol, Barcelona"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
         android:id="@+id/geo_localization"
         android:textAlignment="center"
-        app:layout_constraintRight_toRightOf="@+id/photo_saved"
-        app:layout_constraintLeft_toLeftOf="@+id/photo_saved"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toTopOf="@+id/guideline4"
-        android:background="#8D6E63"
-        android:textColor="#EFEBE9"
+        android:background="#99000000"
+        android:textColor="#FFFFFF"
         android:paddingBottom="10px"
         android:paddingTop="10px"
-        android:elevation="12dp" />
-
-    <ImageView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:srcCompat="@android:drawable/screen_background_light_transparent"
-        android:id="@+id/photo_saved"
+        android:elevation="12dp"
         app:layout_constraintRight_toLeftOf="@+id/guideline3"
         app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_height="wrap_content" />
+
+    <com.example.a47276138y.todoapp.SquareImageView
+        android:id="@+id/photo_saved"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:maxWidth="39dip"
+        android:scaleType="fitXY"
+        android:gravity="center"
+        android:adjustViewBounds="true"
+        app:layout_constraintRight_toLeftOf="@+id/guideline3"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/guideline4"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/guideline4" />
+        app:layout_constraintVertical_bias="0.0"
+        app:layout_constraintHorizontal_bias="0.0" />
 
     <android.support.constraint.Guideline
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="511dp"
         android:id="@+id/guideline3"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.65625"
+        app:layout_constraintGuide_percent="0.5078125"
         tools:layout_editor_absoluteY="0dp"
-        tools:layout_editor_absoluteX="0dp" />
+        tools:layout_editor_absoluteX="195dp" />
 
     <android.support.constraint.Guideline
-        android:layout_width="wrap_content"
+        android:layout_width="384dp"
         android:layout_height="wrap_content"
         android:id="@+id/guideline4"
-        app:layout_constraintGuide_begin="189dp"
+        app:layout_constraintGuide_begin="184dp"
         android:orientation="horizontal"
-        tools:layout_editor_absoluteY="189dp"
+        tools:layout_editor_absoluteY="184dp"
         tools:layout_editor_absoluteX="0dp" />
 
 </android.support.constraint.ConstraintLayout>

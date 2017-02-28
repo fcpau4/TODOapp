@@ -1,19 +1,16 @@
 package com.example.a47276138y.todoapp;
 
+import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Criteria;
+import android.location.Geocoder;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.provider.MediaStore;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.support.v4.os.ResultReceiver;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,54 +20,41 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import com.bumptech.glide.Glide;
 import com.firebase.ui.database.FirebaseListAdapter;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
-import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
-import com.google.android.gms.location.LocationServices;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
 
 import static android.app.Activity.RESULT_OK;
 
 /**
  * A placeholder fragment containing a simple view.
  */
-public class MainActivityFragment extends Fragment implements ConnectionCallbacks, OnConnectionFailedListener {
+public class MainActivityFragment extends Fragment {
 
     static final int REQUEST_TAKE_PHOTO = 1;
+    static final int REQUEST_TAKE_VIDEO = 2;
     private File f;
     private GridView gv;
     private FirebaseListAdapter firebaseListAdapter;
-    private LocationListener locationListener;
-    private LocationManager locationManager;
-    private ResultReceiver mResultReceiver;
+    private DatabaseReference ref;
+    //private ResultReceiver mResultReceiver;
 
-    private Location mLastLocation;
-    private String mLongitudeText;
-    private String mLatitudeText;
-    private GoogleApiClient mGoogleApiClient;
-    private boolean addressRequested;
+    //private Location mLastLocation;
+    //private GoogleApiClient mGoogleApiClient;
     private String mAddressOutput;
 
 
     public MainActivityFragment() {
     }
 
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-
-        // Create an instance of GoogleAPIClient to get LastLocation.
-        if (mGoogleApiClient == null) {
-            mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .addApi(LocationServices.API)
-                    .build();
-        }
 
         View view = inflater.inflate(R.layout.fragment_main, container, false);
         Button btTakeImage = (Button) view.findViewById(R.id.bt_take_img);
@@ -80,22 +64,31 @@ public class MainActivityFragment extends Fragment implements ConnectionCallback
 
             @Override
             public void onClick(View v) {
-
                 dispatchTakePictureIntent();
             }
         });
 
-        gv = (GridView) view.findViewById(R.id.gv_images);
-        DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
 
-        firebaseListAdapter = new FirebaseListAdapter<PhotoData>(getActivity(), PhotoData.class, R.layout.gv_image_square, ref) {
+        recVideo.setOnClickListener(new View.OnClickListener() {
             @Override
-            protected void populateView(View v, PhotoData pic, int position) {
+            public void onClick(View v) {
+                dispatchDoVideoIntent();
+            }
+        });
+
+        gv = (GridView) view.findViewById(R.id.gv_images);
+
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        ref = database.getReference();
+
+        firebaseListAdapter = new FirebaseListAdapter<Media>(getActivity(), Media.class, R.layout.gv_image_square, ref) {
+            @Override
+            protected void populateView(View v, Media pic, int position) {
 
                 ImageView img = (ImageView) v.findViewById(R.id.photo_saved);
-                Glide.with(getContext()).load(Uri.fromFile(new File(pic.getAbsolute())))
+                Glide.with(getContext())
+                        .load(Uri.fromFile(new File(pic.getAbsolute())))
                         .centerCrop()
-                        .crossFade()
                         .into(img);
 
                 TextView geoLoc = (TextView) v.findViewById(R.id.geo_localization);
@@ -107,27 +100,6 @@ public class MainActivityFragment extends Fragment implements ConnectionCallback
         gv.setAdapter(firebaseListAdapter);
 
         return view;
-    }
-
-
-    protected void startIntentService() {
-        Intent intent = new Intent(getActivity(), FetchAddressIntentService.class);
-        intent.putExtra(Constants.RECEIVER, mResultReceiver);
-        intent.putExtra(Constants.LOCATION_DATA_EXTRA, mLastLocation);
-        getActivity().startService(intent);
-    }
-
-    class AddressResultReceiver extends ResultReceiver {
-        public AddressResultReceiver(Handler handler) {
-            super(handler);
-        }
-
-        @Override
-        protected void onReceiveResult(int resultCode, Bundle resultData) {
-            // Get the address string
-            mAddressOutput = resultData.getString(Constants.RESULT_DATA_KEY);
-
-        }
     }
 
 
@@ -151,20 +123,36 @@ public class MainActivityFragment extends Fragment implements ConnectionCallback
                 startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
                 f = photoFile;
             }
-
-            if (mGoogleApiClient.isConnected() && mLastLocation != null) {
-                startIntentService();
-            }
-
-            // If GoogleApiClient isn't connected, process the user's request by
-            // setting addressRequested to true. Later, when GoogleApiClient connects,
-            // launch the service to fetch the address. As far as the user is
-            // concerned, pressing the Fetch Address button
-            // immediately kicks off the process of getting the address.
-            addressRequested = true;
         }
     }
 
+
+    private void dispatchDoVideoIntent() {
+        //  Create new intent
+        Intent makeVideoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+
+        if (makeVideoIntent.resolveActivity(getActivity().getPackageManager()) != null) {
+            // Create a file to save the video
+            File videoFile = null;
+
+            try {
+                videoFile = Utils.createVideoFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            if (videoFile != null) {
+                makeVideoIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(videoFile));
+
+                // Set the video image quality to high
+                makeVideoIntent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1);
+
+                startActivityForResult(makeVideoIntent, REQUEST_TAKE_VIDEO);
+
+                f = videoFile;
+            }
+        }
+    }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -175,12 +163,82 @@ public class MainActivityFragment extends Fragment implements ConnectionCallback
             case REQUEST_TAKE_PHOTO:
                 if (resultCode == RESULT_OK) {
 
-                    DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
+                    String absolute = f.getAbsolutePath();
+                    String address = getCurrentLocation();
 
-                    PhotoData picInfo = new PhotoData(f.getAbsolutePath(), mAddressOutput);
-                    ref.push().setValue(picInfo);
+                    Media mediaInfo = new Media(absolute, address);
+                    ref.push().setValue(mediaInfo);
+                }
+
+            case REQUEST_TAKE_VIDEO:
+                if (resultCode == RESULT_OK) {
+
+                    String absolute = f.getAbsolutePath();
+                    String address = getCurrentLocation();
+
+                    Media mediaInfo = new Media(absolute, address);
+                    ref.push().setValue(mediaInfo);
                 }
         }
+    }
+
+
+    public String getCurrentLocation(){
+        LocationManager locationManager = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
+        Criteria criteria = new Criteria();
+        String provider = locationManager.getBestProvider(criteria, true);
+        try {
+
+            Location mLocation = locationManager.getLastKnownLocation(provider);
+            Geocoder geocoder = new Geocoder(getActivity(), Locale.getDefault());
+
+            List<Address> addresses = null;
+
+            // We're going to get just a single address.
+
+                addresses = geocoder.getFromLocation(
+                        mLocation.getLatitude(),
+                        mLocation.getLongitude(),
+                        1);
+
+            mAddressOutput = addresses.get(0).getAddressLine(0);
+
+        return mAddressOutput;
+
+
+        }catch(SecurityException e){
+            System.out.println(e.getMessage());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+
+    /*@Override
+    public void onStart() {
+        super.onStart();
+        if ((GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(getActivity())) == 0) {
+            mGoogleApiClient.connect();
+        }
+    }
+
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        mGoogleApiClient.disconnect();
+    }
+
+
+
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
     }
 
 
@@ -198,13 +256,31 @@ public class MainActivityFragment extends Fragment implements ConnectionCallback
         }
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
 
-        if(mLastLocation != null){
-            mLatitudeText = String.valueOf(mLastLocation.getLatitude());
-            mLongitudeText = String.valueOf(mLastLocation.getLongitude());
-        }
+        Geocoder geocoder = new Geocoder(getActivity(), Locale.getDefault());
 
-        if(addressRequested){
-            startIntentService();
+        List<Address> addresses = null;
+
+        // We're going to get just a single address.
+        try {
+            addresses = geocoder.getFromLocation(
+                    mLastLocation.getLatitude(),
+                    mLastLocation.getLongitude(),
+                    1);
+
+            Address address = addresses.get(0);
+            ArrayList<String> addressFragments = new ArrayList<>();
+
+            // Fetch the address lines using getAddressLine,
+            // join them, and send them to the thread.
+            for(int i = 0; i < address.getMaxAddressLineIndex(); i++) {
+                addressFragments.add(address.getAddressLine(i));
+            }
+
+            mAddressOutput = addressFragments.get(0);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+
         }
     }
 
@@ -216,7 +292,7 @@ public class MainActivityFragment extends Fragment implements ConnectionCallback
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
-    }
-
-
+    }*/
 }
+
+

@@ -23,10 +23,9 @@ import static com.firebase.ui.auth.ui.email.RegisterEmailFragment.TAG;
 
 public class FetchAddressIntentService extends IntentService {
 
+
     //https://developer.android.com/training/location/display-address.html#fetch-address
-
-    protected ResultReceiver mReceiver;
-
+    private ResultReceiver receiver;
     public FetchAddressIntentService(){
         super("FetchAddressIntentService");
     }
@@ -43,6 +42,7 @@ public class FetchAddressIntentService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
 
+        receiver = intent.getParcelableExtra(Constants.RECEIVER);
         String errorMessage = "";
 
         // Get the location passed to this service through an extra.
@@ -51,7 +51,7 @@ public class FetchAddressIntentService extends IntentService {
 
         Geocoder geocoder = new Geocoder(this, Locale.getDefault());
 
-        List<Address> addresses = null;
+        List<Address> addresses=null;
 
         // We're going to get just a single address.
         try {
@@ -82,14 +82,14 @@ public class FetchAddressIntentService extends IntentService {
             deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage);
         } else {
             Address address = addresses.get(0);
-            ArrayList<String> addressFragments = new ArrayList<String>();
+            ArrayList<String> addressFragments = new ArrayList<>();
 
             // Fetch the address lines using getAddressLine,
             // join them, and send them to the thread.
             for(int i = 0; i < address.getMaxAddressLineIndex(); i++) {
                 addressFragments.add(address.getAddressLine(i));
             }
-            Log.i(TAG, getString(R.string.address_found));
+
             deliverResultToReceiver(Constants.SUCCESS_RESULT,
                     TextUtils.join(System.getProperty("line.separator"),
                             addressFragments));
@@ -100,6 +100,6 @@ public class FetchAddressIntentService extends IntentService {
     private void deliverResultToReceiver(int resultCode, String message) {
         Bundle bundle = new Bundle();
         bundle.putString(Constants.RESULT_DATA_KEY, message);
-        mReceiver.send(resultCode, bundle);
+        receiver.send(resultCode, bundle);
     }
 }

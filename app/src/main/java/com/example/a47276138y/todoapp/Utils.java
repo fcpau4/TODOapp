@@ -17,6 +17,7 @@ import java.util.Date;
 public class Utils {
 
     static String mCurrentPhotoPath;
+    static String mCurrentVideoPath;
 
     public static File createImageFile() throws IOException {
         // Create an image file name
@@ -34,6 +35,26 @@ public class Utils {
         mCurrentPhotoPath = "file:" + image.getAbsolutePath();
         return image;
     }
+
+
+
+    public static File createVideoFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String videoFileName = "MP4_" + timeStamp + "_";
+        File storageDir = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_MOVIES);
+        File video = File.createTempFile(
+                videoFileName,  /* prefix */
+                ".mp4",         /* suffix */
+                storageDir      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentVideoPath = "file:" + video.getAbsolutePath();
+        return video;
+    }
+
 
 
 
