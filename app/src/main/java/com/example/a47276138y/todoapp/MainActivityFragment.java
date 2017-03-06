@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,10 +42,6 @@ public class MainActivityFragment extends Fragment {
     private GridView gv;
     private FirebaseListAdapter firebaseListAdapter;
     private DatabaseReference ref;
-    //private ResultReceiver mResultReceiver;
-
-    //private Location mLastLocation;
-    //private GoogleApiClient mGoogleApiClient;
     private String mAddressOutput;
 
 
@@ -169,6 +166,7 @@ public class MainActivityFragment extends Fragment {
                     Media mediaInfo = new Media(absolute, address);
                     ref.push().setValue(mediaInfo);
                 }
+                break;
 
             case REQUEST_TAKE_VIDEO:
                 if (resultCode == RESULT_OK) {
@@ -179,6 +177,7 @@ public class MainActivityFragment extends Fragment {
                     Media mediaInfo = new Media(absolute, address);
                     ref.push().setValue(mediaInfo);
                 }
+                break;
         }
     }
 
@@ -202,6 +201,8 @@ public class MainActivityFragment extends Fragment {
                         1);
 
             mAddressOutput = addresses.get(0).getAddressLine(0);
+
+            Log.w("LOCATION",  mAddressOutput);
 
         return mAddressOutput;
 
